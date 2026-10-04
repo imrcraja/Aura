@@ -2,28 +2,36 @@
 
 **AuraMod + Aura Renderer** — a mobile-first rendering platform for Minecraft Java Edition.
 
-## Project layout
+![Aura logo](src/main/resources/assets/aura/icon.svg)
 
-- `AuraMod` — Minecraft-side integration, compatibility hooks and configuration.
-- `Aura Renderer` — version-independent renderer architecture.
-- `renderer/backend` — Vulkan/OpenGL backend boundaries.
-- `renderer/compat` — small adapters for individual Minecraft rendering generations.
+## Current development scope
 
-## Current development target
+- **AuraMod:** Minecraft 1.20.1 (Fabric).
+- **Aura Renderer:** one version-independent renderer core with per-version adapters.
+- **Target launchers:** PojavLauncher, Zalith Launcher, LTW and compatible Android Java launchers.
+- **Long-term versions:** adapters can cover releases from old Minecraft generations through future releases without cloning the renderer core.
 
-- AuraMod: Minecraft **1.20.1** (Fabric).
-- Renderer core: version-independent API/boundaries.
-- Intended launcher targets: PojavLauncher, Zalith Launcher, LTW and compatible Android Java launchers.
-- Future: expand version adapters while keeping one renderer core.
+## Architecture
 
-## Important engineering goal
+```text
+Minecraft version adapter
+        ↓
+    Aura Renderer Core
+        ↓
+  ┌─────┴─────┐
+ Vulkan      OpenGL
+ backend     backend
+  └─────┬─────┘
+        ↓
+      GPU
+```
 
-Aura does not promise a fixed FPS number. It targets the lowest practical CPU submission overhead, stable frame times, aggressive batching/culling, adaptive memory use and maximum sustainable GPU throughput for the device.
+Aura is designed to reduce CPU-side rendering overhead rather than pretend Minecraft can run with zero CPU work. The performance target is maximum sustainable hardware throughput with stable frame times.
 
 ## Status
 
-Early alpha. The repository currently contains the cross-version architecture and backend boundaries; the native Vulkan submission layer and deep Minecraft renderer replacement are subsequent implementation stages.
+**Early alpha.** The cross-version architecture, adaptive memory profile and backend boundaries are in place. The deep renderer replacement, native Vulkan submission path, GPU-driven chunk pipeline, and broad mod compatibility layer are the next implementation stages.
 
-## License
+## Logo
 
-MIT
+The Aura brand uses one shared logo for AuraMod and Aura Renderer.
