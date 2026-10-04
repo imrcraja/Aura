@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "aura",
+  "version": "${version}",
+  "name": "AuraMod",
+  "description": "Mobile-first Minecraft rendering and performance platform.",
+  "authors": ["RC RAJA"],
+  "license": "MIT",
+  "icon": "assets/aura/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.aura.client.AuraModClient"]
+  },
+  "mixins": ["aura.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.20.1",
+    "fabric-api": "*"
+  }
+}
