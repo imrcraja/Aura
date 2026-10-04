@@ -3,10 +3,13 @@
   "id": "aura",
   "version": "${version}",
   "name": "AuraMod",
-  "description": "Mobile-first Minecraft rendering and performance platform.",
-  "authors": ["RC RAJA"],
+  "description": "AuraMod + Aura Renderer — mobile-first Minecraft Java rendering and performance platform.",
+  "authors": ["RC Empire"],
   "license": "MIT",
   "environment": "client",
+  "contact": {
+    "homepage": "https://youtube.com/@RCRAJAGAMER2.0"
+  },
   "entrypoints": {
     "client": ["com.aura.client.AuraModClient"]
   },
