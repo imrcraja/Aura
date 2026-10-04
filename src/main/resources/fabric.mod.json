@@ -6,7 +6,6 @@
   "description": "Mobile-first Minecraft rendering and performance platform.",
   "authors": ["RC RAJA"],
   "license": "MIT",
-  "icon": "assets/aura/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["com.aura.client.AuraModClient"]
