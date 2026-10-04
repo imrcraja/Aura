@@ -1,5 +1,7 @@
 package com.aura.client.renderer.backend;
 
+import com.aura.client.renderer.chunk.ChunkMeshData;
+
 public interface RenderBackend {
     String id();
     void initialize();
@@ -8,6 +10,10 @@ public interface RenderBackend {
 
     default RenderMesh createMesh(String label, int vertexCount, int indexCount) {
         throw new UnsupportedOperationException(id() + " does not implement mesh creation yet");
+    }
+
+    default RenderMesh uploadChunkMesh(String label, ChunkMeshData mesh) {
+        return createMesh(label, mesh.vertexCount(), mesh.indexCount());
     }
 
     default RenderTexture createTexture(String label, int width, int height) {
