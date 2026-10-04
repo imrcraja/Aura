@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 public final class AuraRuntime {
     private static AuraRenderer renderer;
     private static AuraDeviceProfile deviceProfile;
+    private static AuraPerformanceManager performanceManager;
 
     private AuraRuntime() {}
 
@@ -15,6 +16,10 @@ public final class AuraRuntime {
         deviceProfile = AuraDeviceProfile.detect();
         renderer = new AuraRenderer(RenderBackendSelector.select(), deviceProfile);
         renderer.initialize();
+
+        performanceManager = new AuraPerformanceManager();
+        performanceManager.register();
+
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> shutdown());
     }
 
@@ -28,10 +33,16 @@ public final class AuraRuntime {
         return deviceProfile;
     }
 
+    public static AuraFrameProfiler frameProfiler() {
+        if (performanceManager == null) throw new IllegalStateException("Aura has not been initialized");
+        return performanceManager.profiler();
+    }
+
     private static void shutdown() {
         if (renderer != null) {
             renderer.shutdown();
             renderer = null;
         }
+        performanceManager = null;
     }
 }
