@@ -7,65 +7,81 @@ import net.minecraft.client.render.VertexFormatElement;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/**
- * Decodes vanilla 1.20.1 chunk vertex buffers into Aura's canonical position-only mesh.
- *
- * This bridge preserves the vanilla draw mode by expanding supported triangle primitives
- * into an indexed triangle list. It never changes or cancels vanilla rendering.
- */
 public final class ChunkMeshExtractor {
     private ChunkMeshExtractor() {}
 
     public static ChunkMeshData positions(float[] positions, int[] indices) {
-        if (positions == null || indices == null) {
-            throw new IllegalArgumentException("mesh arrays must be non-null");
-        }
-        if ((positions.length % 3) != 0) {
-            throw new IllegalArgumentException("positions must contain XYZ triples");
-        }
-        return new ChunkMeshData(positions.clone(), indices.clone());
+        return new ChunkMeshData(positions, indices);
     }
 
     public static ChunkMeshData fromBuiltBuffer(BufferBuilder.BuiltBuffer builtBuffer) {
         if (builtBuffer == null || builtBuffer.isEmpty()) return null;
-
         BufferBuilder.DrawParameters parameters = builtBuffer.getParameters();
         VertexFormat format = parameters.format();
         int stride = format.getVertexSizeByte();
         int vertexCount = parameters.vertexCount();
         if (stride <= 0 || vertexCount <= 0) return null;
 
-        int positionOffset = 0;
-        boolean foundPosition = false;
+        int positionOffset = -1, colorOffset = -1, uv0Offset = -1, lightOffset = -1, normalOffset = -1;
+        int offset = 0;
         for (VertexFormatElement element : format.getElements()) {
-            if (element.isPosition()) {
-                if (element.getComponentType() != VertexFormatElement.ComponentType.FLOAT
-                        || element.getComponentCount() != 3) {
-                    return null;
+            switch (element.getType()) {
+                case POSITION -> {
+                    if (element.getComponentType() != VertexFormatElement.ComponentType.FLOAT || element.getComponentCount() != 3) return null;
+                    positionOffset = offset;
                 }
-                foundPosition = true;
-                break;
+                case COLOR -> { if (element.getComponentCount() == 4) colorOffset = offset; }
+                case UV -> {
+                    if (element.getComponentCount() == 2) {
+                        if (element.getUvIndex() == 0) uv0Offset = offset;
+                        else if (element.getUvIndex() == 2) lightOffset = offset;
+                    }
+                }
+                case NORMAL -> { if (element.getComponentCount() == 3) normalOffset = offset; }
+                default -> {}
             }
-            positionOffset += element.getByteLength();
+            offset += element.getByteLength();
         }
-        if (!foundPosition || positionOffset + 3 * Float.BYTES > stride) return null;
+        if (positionOffset < 0 || positionOffset + 12 > stride) return null;
 
         ByteBuffer source = builtBuffer.getVertexBuffer().duplicate().order(ByteOrder.nativeOrder());
-        long requiredLong = (long) vertexCount * stride;
-        if (requiredLong > source.remaining() || requiredLong > Integer.MAX_VALUE) return null;
+        long required = (long) vertexCount * stride;
+        if (required > source.remaining() || required > Integer.MAX_VALUE) return null;
 
-        float[] positions = new float[vertexCount * 3];
+        float[] vertices = new float[vertexCount * ChunkMeshData.FLOAT_STRIDE];
         int base = source.position();
-        for (int vertex = 0; vertex < vertexCount; vertex++) {
-            int offset = base + vertex * stride + positionOffset;
-            positions[vertex * 3] = source.getFloat(offset);
-            positions[vertex * 3 + 1] = source.getFloat(offset + Float.BYTES);
-            positions[vertex * 3 + 2] = source.getFloat(offset + Float.BYTES * 2);
+        for (int v = 0; v < vertexCount; v++) {
+            int so = base + v * stride, t = v * ChunkMeshData.FLOAT_STRIDE;
+            vertices[t] = source.getFloat(so + positionOffset);
+            vertices[t + 1] = source.getFloat(so + positionOffset + 4);
+            vertices[t + 2] = source.getFloat(so + positionOffset + 8);
+
+            vertices[t + 3] = vertices[t + 4] = vertices[t + 5] = vertices[t + 6] = 1.0f;
+            if (colorOffset >= 0) {
+                vertices[t + 3] = (source.get(so + colorOffset) & 0xFF) / 255.0f;
+                vertices[t + 4] = (source.get(so + colorOffset + 1) & 0xFF) / 255.0f;
+                vertices[t + 5] = (source.get(so + colorOffset + 2) & 0xFF) / 255.0f;
+                vertices[t + 6] = (source.get(so + colorOffset + 3) & 0xFF) / 255.0f;
+            }
+            if (uv0Offset >= 0) {
+                vertices[t + 7] = source.getShort(so + uv0Offset) / 32768.0f;
+                vertices[t + 8] = source.getShort(so + uv0Offset + 2) / 32768.0f;
+            }
+            if (lightOffset >= 0) {
+                vertices[t + 9] = (source.getShort(so + lightOffset) & 0xFFFF) / 65535.0f;
+                vertices[t + 10] = (source.getShort(so + lightOffset + 2) & 0xFFFF) / 65535.0f;
+            }
+            vertices[t + 11] = vertices[t + 12] = 0.0f;
+            vertices[t + 13] = 1.0f;
+            if (normalOffset >= 0) {
+                vertices[t + 11] = source.get(so + normalOffset) / 127.0f;
+                vertices[t + 12] = source.get(so + normalOffset + 1) / 127.0f;
+                vertices[t + 13] = source.get(so + normalOffset + 2) / 127.0f;
+            }
         }
 
         int[] indices = triangleIndices(parameters.mode(), vertexCount);
-        if (indices.length == 0) return null;
-        return positions(positions, indices);
+        return indices.length == 0 ? null : new ChunkMeshData(vertices, indices, true);
     }
 
     private static int[] triangleIndices(VertexFormat.DrawMode mode, int vertexCount) {
@@ -78,56 +94,40 @@ public final class ChunkMeshExtractor {
         };
     }
 
-    private static int[] sequentialTriangles(int vertexCount) {
-        int count = vertexCount - (vertexCount % 3);
-        int[] indices = new int[count];
-        for (int i = 0; i < count; i++) indices[i] = i;
-        return indices;
+    private static int[] sequentialTriangles(int n) {
+        int count = n - n % 3;
+        int[] out = new int[count];
+        for (int i = 0; i < count; i++) out[i] = i;
+        return out;
     }
 
-    private static int[] quadsToTriangles(int vertexCount) {
-        int quadCount = vertexCount / 4;
-        int[] indices = new int[quadCount * 6];
-        int out = 0;
-        for (int quad = 0; quad < quadCount; quad++) {
-            int base = quad * 4;
-            indices[out++] = base;
-            indices[out++] = base + 1;
-            indices[out++] = base + 2;
-            indices[out++] = base;
-            indices[out++] = base + 2;
-            indices[out++] = base + 3;
+    private static int[] quadsToTriangles(int n) {
+        int[] out = new int[(n / 4) * 6];
+        int p = 0;
+        for (int q = 0; q < n / 4; q++) {
+            int b = q * 4;
+            out[p++] = b; out[p++] = b + 1; out[p++] = b + 2;
+            out[p++] = b; out[p++] = b + 2; out[p++] = b + 3;
         }
-        return indices;
+        return out;
     }
 
-    private static int[] triangleStrip(int vertexCount) {
-        if (vertexCount < 3) return new int[0];
-        int[] indices = new int[(vertexCount - 2) * 3];
-        int out = 0;
-        for (int i = 0; i < vertexCount - 2; i++) {
-            if ((i & 1) == 0) {
-                indices[out++] = i;
-                indices[out++] = i + 1;
-                indices[out++] = i + 2;
-            } else {
-                indices[out++] = i + 1;
-                indices[out++] = i;
-                indices[out++] = i + 2;
-            }
+    private static int[] triangleStrip(int n) {
+        if (n < 3) return new int[0];
+        int[] out = new int[(n - 2) * 3];
+        int p = 0;
+        for (int i = 0; i < n - 2; i++) {
+            if ((i & 1) == 0) { out[p++] = i; out[p++] = i + 1; out[p++] = i + 2; }
+            else { out[p++] = i + 1; out[p++] = i; out[p++] = i + 2; }
         }
-        return indices;
+        return out;
     }
 
-    private static int[] triangleFan(int vertexCount) {
-        if (vertexCount < 3) return new int[0];
-        int[] indices = new int[(vertexCount - 2) * 3];
-        int out = 0;
-        for (int i = 1; i < vertexCount - 1; i++) {
-            indices[out++] = 0;
-            indices[out++] = i;
-            indices[out++] = i + 1;
-        }
-        return indices;
+    private static int[] triangleFan(int n) {
+        if (n < 3) return new int[0];
+        int[] out = new int[(n - 2) * 3];
+        int p = 0;
+        for (int i = 1; i < n - 1; i++) { out[p++] = 0; out[p++] = i; out[p++] = i + 1; }
+        return out;
     }
 }
