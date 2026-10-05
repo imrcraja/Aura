@@ -13,6 +13,9 @@ public final class ChunkMeshData {
     }
 
     public int vertexCount() { return vertices.length / 3; }
+
+    /** Aura's canonical position-only stride for the low-level extraction bridge. */
+    public int vertexStrideFloats() { return 3; }
     public int indexCount() { return indices.length; }
     public float[] vertices() { return Arrays.copyOf(vertices, vertices.length); }
     public int[] indices() { return Arrays.copyOf(indices, indices.length); }
