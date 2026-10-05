@@ -3,6 +3,8 @@ package com.aura.client.core;
 import com.aura.client.renderer.AuraRenderer;
 import com.aura.client.renderer.backend.RenderBackendSelector;
 import com.aura.client.renderer.compat.v1201.Minecraft1201Adapter;
+import com.aura.client.renderer.chunk.ChunkGpuCache;
+import com.aura.client.renderer.chunk.ChunkMeshCache;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 
 /** Owns the long-lived Aura runtime. No Minecraft-version-specific renderer code belongs here. */
@@ -11,6 +13,8 @@ public final class AuraRuntime {
     private static AuraDeviceProfile deviceProfile;
     private static AuraPerformanceManager performanceManager;
     private static Minecraft1201Adapter minecraft1201Adapter;
+    private static ChunkMeshCache chunkMeshCache;
+    private static ChunkGpuCache chunkGpuCache;
 
     private AuraRuntime() {}
 
@@ -18,6 +22,8 @@ public final class AuraRuntime {
         deviceProfile = AuraDeviceProfile.detect();
         renderer = new AuraRenderer(RenderBackendSelector.select(), deviceProfile);
         renderer.initialize();
+        chunkMeshCache = new ChunkMeshCache(AuraAdaptiveCache.budgetBytes(deviceProfile));
+        chunkGpuCache = new ChunkGpuCache(AuraAdaptiveCache.gpuEntryBudget(deviceProfile));
 
         performanceManager = new AuraPerformanceManager();
         performanceManager.register();
@@ -48,6 +54,11 @@ public final class AuraRuntime {
             minecraft1201Adapter.detach();
             minecraft1201Adapter = null;
         }
+        if (chunkGpuCache != null) {
+            chunkGpuCache.clear();
+            chunkGpuCache = null;
+        }
+        chunkMeshCache = null;
         if (renderer != null) {
             renderer.shutdown();
             renderer = null;
