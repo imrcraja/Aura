@@ -5,11 +5,6 @@ import net.minecraft.client.gl.VertexBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/**
- * Render-thread handoff for extracted chunk meshes.
- * Chunk rebuilding may happen off-thread, while OpenGL resource creation must happen
- * with Minecraft's active render context.
- */
 public final class AuraGpuUploadQueue {
     public record Pending(ChunkMeshCache.Key key, ChunkMeshData mesh, VertexBuffer vanillaBuffer) {}
 
@@ -25,6 +20,22 @@ public final class AuraGpuUploadQueue {
         if (key == null || mesh == null || mesh.indexCount() == 0) return;
         if (pending.size() >= maxPending) pending.removeFirst();
         pending.addLast(new Pending(key, mesh, vanillaBuffer));
+    }
+
+    public synchronized int removeOlderRevisions(int x, int y, int z, int section, String layer, int revision) {
+        int removed = 0;
+        var it = pending.iterator();
+        while (it.hasNext()) {
+            Pending item = it.next();
+            ChunkMeshCache.Key key = item.key();
+            if (key.x() == x && key.y() == y && key.z() == z &&
+                    key.section() == section && key.revision() < revision &&
+                    key.layer().equals(layer)) {
+                it.remove();
+                removed++;
+            }
+        }
+        return removed;
     }
 
     public synchronized Pending poll() { return pending.pollFirst(); }
