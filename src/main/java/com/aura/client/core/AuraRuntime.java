@@ -106,9 +106,13 @@ public final class AuraRuntime {
 
             try {
                 var gpuMesh = chunkGpuCache.upload(renderer.backend(), pending.key(), pending.mesh());
-                if (gpuMesh != null) {
-                    uploaded++;
+                if (gpuMesh == null) {
+                    // The resource was intentionally rejected (for example because it
+                    // cannot fit the bounded GPU budget). Do not immediately requeue it:
+                    // otherwise the same item can spin forever on this render thread.
+                    break;
                 }
+                uploaded++;
             } catch (RuntimeException failure) {
                 gpuUploadQueue.offer(pending.key(), pending.mesh(), pending.vanillaBuffer());
                 break;
