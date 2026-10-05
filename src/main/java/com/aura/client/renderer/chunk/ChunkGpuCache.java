@@ -3,15 +3,15 @@ package com.aura.client.renderer.chunk;
 import com.aura.client.renderer.backend.RenderBackend;
 import com.aura.client.renderer.backend.RenderMesh;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-/** Reuses backend mesh handles with a bounded byte budget and explicit cleanup. */
 public final class ChunkGpuCache {
     private final long budgetBytes;
     private long usedBytes;
-    private final LinkedHashMap<ChunkMeshCache.Key, RenderMesh> entries =
-            new LinkedHashMap<>(32, 0.75f, true);
+    private final LinkedHashMap<ChunkMeshCache.Key, RenderMesh> entries = new LinkedHashMap<>(32, 0.75f, true);
 
     public ChunkGpuCache(long budgetBytes) {
         if (budgetBytes < 1) throw new IllegalArgumentException("budgetBytes must be positive");
@@ -21,11 +21,10 @@ public final class ChunkGpuCache {
     public synchronized RenderMesh get(ChunkMeshCache.Key key) { return entries.get(key); }
 
     public synchronized RenderMesh upload(RenderBackend backend, ChunkMeshCache.Key key, ChunkMeshData mesh) {
+        if (backend == null || key == null || mesh == null) throw new IllegalArgumentException("backend, key and mesh are required");
         RenderMesh old = entries.remove(key);
         if (old != null) usedBytes -= old.estimatedBytes();
-
-        RenderMesh uploaded = backend.uploadChunkMesh(
-                "chunk-" + key.x() + "-" + key.y() + "-" + key.z(), mesh);
+        RenderMesh uploaded = backend.uploadChunkMesh("chunk-" + key.x() + "-" + key.y() + "-" + key.z() + "-" + key.layer(), mesh);
         entries.put(key, uploaded);
         usedBytes += uploaded.estimatedBytes();
         trim();
@@ -38,6 +37,32 @@ public final class ChunkGpuCache {
             usedBytes -= old.estimatedBytes();
             old.close();
         }
+    }
+
+    public synchronized int removeChunk(int x, int y, int z) {
+        int removed = 0;
+        var it = entries.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<ChunkMeshCache.Key, RenderMesh> entry = it.next();
+            ChunkMeshCache.Key key = entry.getKey();
+            if (key.x() == x && key.y() == y && key.z() == z) {
+                usedBytes -= entry.getValue().estimatedBytes();
+                entry.getValue().close();
+                it.remove();
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    public synchronized List<Map.Entry<ChunkMeshCache.Key, RenderMesh>> snapshotForLayer(String layer) {
+        List<Map.Entry<ChunkMeshCache.Key, RenderMesh>> result = new ArrayList<>();
+        for (Map.Entry<ChunkMeshCache.Key, RenderMesh> entry : entries.entrySet()) {
+            if (layer == null || layer.equals(entry.getKey().layer())) {
+                result.add(Map.entry(entry.getKey(), entry.getValue()));
+            }
+        }
+        return result;
     }
 
     public synchronized void clear() {

@@ -32,4 +32,24 @@ public final class WorldRendererAuraMixin {
             }
         });
     }
+
+    @Inject(
+            method = "renderLayer(Lnet/minecraft/client/render/RenderLayer;Lnet/minecraft/client/util/math/MatrixStack;DDDLorg/joml/Matrix4f;)V",
+            at = @At("TAIL")
+    )
+    private void aura$drawCachedLayer(
+            RenderLayer renderLayer,
+            MatrixStack matrices,
+            double cameraX,
+            double cameraY,
+            double cameraZ,
+            Matrix4f positionMatrix,
+            CallbackInfo ci
+    ) {
+        AuraSafeExecutor.run(() -> {
+            if (AuraRuntime.isInitialized()) {
+                AuraRuntime.renderCachedLayer(renderLayer, cameraX, cameraY, cameraZ);
+            }
+        });
+    }
 }

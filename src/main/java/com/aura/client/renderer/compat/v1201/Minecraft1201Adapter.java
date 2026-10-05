@@ -48,6 +48,18 @@ public final class Minecraft1201Adapter implements VersionAdapter {
     public Matrix4f currentPositionMatrix() { return currentPositionMatrix; }
     public boolean hasRenderContext() { return currentContext != null; }
 
+    public String currentLayerKey() {
+        RenderLayer layer = currentLayer;
+        if (layer == null) return "unknown";
+        return layer.getClass().getName() + ":" + layer.getVertexFormat().getVertexSizeByte()
+                + ":" + layer.getDrawMode().name();
+    }
+
+    public boolean currentLayerSupportsAuraMesh() {
+        RenderLayer layer = currentLayer;
+        return layer != null && layer.getDrawMode() != null && layer.getVertexFormat() != null;
+    }
+
     @Override
     public void detach() {
         currentContext = null;
