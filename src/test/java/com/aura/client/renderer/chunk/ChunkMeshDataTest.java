@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ChunkMeshDataTest {
     @Test
     void positionOnlyMeshUsesCanonicalStrideAndDefaults() {
-        ChunkMeshData mesh = new ChunkMeshData(new float[]{0,1,2,3,4,5}, new int[]{0,1,2});
+        ChunkMeshData mesh = new ChunkMeshData(new float[]{0,1,2}, new int[]{0,0,0});
         assertEquals(ChunkMeshData.FLOAT_STRIDE, mesh.vertexStrideFloats());
         assertEquals(1, mesh.vertexCount());
         assertEquals(3, mesh.indexCount());

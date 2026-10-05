@@ -104,8 +104,10 @@ public final class AuraRuntime {
             if (chunkMeshCache.get(pending.key()) != pending.mesh()) continue;
 
             try {
-                chunkGpuCache.upload(renderer.backend(), pending.key(), pending.mesh());
-                uploaded++;
+                var gpuMesh = chunkGpuCache.upload(renderer.backend(), pending.key(), pending.mesh());
+                if (gpuMesh != null) {
+                    uploaded++;
+                }
             } catch (RuntimeException failure) {
                 gpuUploadQueue.offer(pending.key(), pending.mesh(), pending.vanillaBuffer());
                 break;

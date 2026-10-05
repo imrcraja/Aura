@@ -8,8 +8,8 @@ class ChunkMeshCacheTest {
     void replacesSameKeyWithoutDoubleCountingBytes() {
         ChunkMeshCache cache = new ChunkMeshCache(1024 * 1024);
         ChunkMeshCache.Key key = new ChunkMeshCache.Key(0,0,0,0,1,"solid");
-        ChunkMeshData first = new ChunkMeshData(new float[ChunkMeshData.FLOAT_STRIDE], new int[]{0});
-        ChunkMeshData second = new ChunkMeshData(new float[ChunkMeshData.FLOAT_STRIDE * 2], new int[]{0,0});
+        ChunkMeshData first = new ChunkMeshData(new float[]{0,0,0}, new int[]{0});
+        ChunkMeshData second = new ChunkMeshData(new float[]{0,0,0,1,1,1}, new int[]{0,0});
         cache.put(key, first);
         cache.put(key, second);
         assertEquals(second.estimatedBytes(), cache.usedBytes());
@@ -19,7 +19,7 @@ class ChunkMeshCacheTest {
     @Test
     void removesOnlyOlderMatchingRevision() {
         ChunkMeshCache cache = new ChunkMeshCache(1024 * 1024);
-        ChunkMeshData mesh = new ChunkMeshData(new float[ChunkMeshData.FLOAT_STRIDE], new int[]{0});
+        ChunkMeshData mesh = new ChunkMeshData(new float[]{0,0,0}, new int[]{0});
         cache.put(new ChunkMeshCache.Key(1,2,3,0,1,"solid"), mesh);
         cache.put(new ChunkMeshCache.Key(1,2,3,0,2,"solid"), mesh);
         cache.put(new ChunkMeshCache.Key(1,2,3,0,1,"cutout"), mesh);

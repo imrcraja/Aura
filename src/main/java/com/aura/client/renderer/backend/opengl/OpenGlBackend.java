@@ -155,16 +155,19 @@ public final class OpenGlBackend implements RenderBackend {
             if (!(mesh instanceof OpenGlMesh glMesh) || glMesh.indexCount <= 0 || glMesh.vao == 0) return;
 
             ShaderProgram shader = RenderSystem.getShader();
-            if (shader != null && shader.chunkOffset != null) {
+            boolean offsetApplied = shader != null && shader.chunkOffset != null;
+            if (offsetApplied) {
                 shader.chunkOffset.set((float) offsetX, (float) offsetY, (float) offsetZ);
             }
 
-            GL30.glBindVertexArray(glMesh.vao);
-            GL15.glDrawElements(GL15.GL_TRIANGLES, glMesh.indexCount, GL15.GL_UNSIGNED_INT, 0L);
-            GL30.glBindVertexArray(0);
-
-            if (shader != null && shader.chunkOffset != null) {
-                shader.chunkOffset.set(0.0f, 0.0f, 0.0f);
+            try {
+                GL30.glBindVertexArray(glMesh.vao);
+                GL15.glDrawElements(GL15.GL_TRIANGLES, glMesh.indexCount, GL15.GL_UNSIGNED_INT, 0L);
+            } finally {
+                GL30.glBindVertexArray(0);
+                if (offsetApplied) {
+                    shader.chunkOffset.set(0.0f, 0.0f, 0.0f);
+                }
             }
         }
         @Override public void end() { recording = false; }
