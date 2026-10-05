@@ -48,8 +48,9 @@ public final class AuraRuntime {
     public static boolean isInitialized() { return renderer != null; }
 
     public static void observeRenderLayer(RenderLayer layer) {
-        // Observation boundary only; vanilla remains authoritative until Aura has a
-        // compatible vertex-format/material bridge for this layer.
+        if (minecraft1201Adapter == null) return;
+        // Layer observation is intentionally side-effect free until the version-specific
+        // vertex/material extraction bridge is ready.
     }
 
     public static AuraFrameProfiler frameProfiler() {
