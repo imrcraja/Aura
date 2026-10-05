@@ -60,7 +60,7 @@ public final class OpenGlBackend implements RenderBackend {
             GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vertexBuffer);
             GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vertices, GL15.GL_STATIC_DRAW);
             GL30.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 3 * Float.BYTES, 0L);
-            GL20.glEnableVertexAttribArray(0);
+            org.lwjgl.opengl.GL20.glEnableVertexAttribArray(0);
             GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
             GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, indices, GL15.GL_STATIC_DRAW);
             GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
