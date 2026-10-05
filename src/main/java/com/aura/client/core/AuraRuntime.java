@@ -98,6 +98,32 @@ public final class AuraRuntime {
         drainGpuUploads(8);
     }
 
+    /**
+     * Draws only the GPU meshes belonging to the currently active vanilla render layer.
+     * Vanilla remains responsible for the normal draw; Aura is an additional opt-in path
+     * until full material/shader equivalence is proven.
+     */
+    public static int renderCachedLayer(RenderLayer layer, double cameraX, double cameraY, double cameraZ) {
+        if (!isInitialized() || layer == null || chunkGpuCache == null) return 0;
+        String layerKey = AuraChunkBufferRegistry.layerKey(layer);
+        var entries = chunkGpuCache.snapshotForLayer(layerKey);
+        if (entries.isEmpty()) return 0;
+
+        int maxDistance = Math.max(16, Integer.getInteger("aura.render.distance", 12) * 16);
+        long maxDistanceSq = (long) maxDistance * maxDistance;
+        java.util.ArrayList<com.aura.client.renderer.backend.RenderMesh> visible = new java.util.ArrayList<>();
+        for (var entry : entries) {
+            ChunkMeshCache.Key key = entry.getKey();
+            double dx = key.x() + 8.0 - cameraX;
+            double dy = key.y() + 8.0 - cameraY;
+            double dz = key.z() + 8.0 - cameraZ;
+            if (dx * dx + dy * dy + dz * dz <= maxDistanceSq) {
+                visible.add(entry.getValue());
+            }
+        }
+        return renderer.drawMeshes(visible);
+    }
+
     public static AuraFrameProfiler frameProfiler() {
         if (performanceManager == null) throw new IllegalStateException("Aura has not been initialized");
         return performanceManager.profiler();
