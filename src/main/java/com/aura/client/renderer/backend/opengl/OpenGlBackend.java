@@ -22,14 +22,19 @@ import static org.lwjgl.system.MemoryUtil.memFree;
  */
 public final class OpenGlBackend implements RenderBackend {
     private boolean initialized;
+    private boolean contextReady;
 
     @Override public String id() { return "opengl"; }
 
     @Override public void initialize() {
+        // Fabric/Minecraft owns the current GL context. Backend activation is therefore
+        // intentionally lazy and only touches GL objects when a live context exists.
         initialized = true;
+        contextReady = false;
     }
 
     @Override public void shutdown() {
+        contextReady = false;
         initialized = false;
     }
 
@@ -41,6 +46,10 @@ public final class OpenGlBackend implements RenderBackend {
         if (!initialized) throw new IllegalStateException("Aura OpenGL backend is not initialized");
     }
 
+    private void markContextReady() {
+        contextReady = true;
+    }
+
     @Override public RenderMesh createMesh(String label, int vertexCount, int indexCount) {
         requireInitialized();
         return new OpenGlMesh(label, vertexCount, indexCount, 0, 0);
@@ -48,6 +57,7 @@ public final class OpenGlBackend implements RenderBackend {
 
     @Override public RenderMesh uploadChunkMesh(String label, ChunkMeshData mesh) {
         requireInitialized();
+        markContextReady();
         int vertexArray = GL30.glGenVertexArrays();
         int vertexBuffer = GL15.glGenBuffers();
         int indexBuffer = GL15.glGenBuffers();
