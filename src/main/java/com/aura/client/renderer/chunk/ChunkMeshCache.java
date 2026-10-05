@@ -1,5 +1,6 @@
 package com.aura.client.renderer.chunk;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 
 /** Bounded LRU cache for reusable CPU-side chunk meshes. */
@@ -36,6 +37,23 @@ public final class ChunkMeshCache {
         ChunkMeshData old = entries.remove(key);
         if (old != null) usedBytes -= old.estimatedBytes();
         return old;
+    }
+
+    public synchronized int removeOlderRevisions(int x, int y, int z, int section, String layer, int revision) {
+        int removed = 0;
+        Iterator<java.util.Map.Entry<Key, ChunkMeshData>> it = entries.entrySet().iterator();
+        while (it.hasNext()) {
+            java.util.Map.Entry<Key, ChunkMeshData> entry = it.next();
+            Key key = entry.getKey();
+            if (key.x() == x && key.y() == y && key.z() == z &&
+                    key.section() == section && key.revision() < revision &&
+                    key.layer().equals(layer)) {
+                usedBytes -= entry.getValue().estimatedBytes();
+                it.remove();
+                removed++;
+            }
+        }
+        return removed;
     }
 
     public synchronized int removeChunk(int x, int y, int z) {

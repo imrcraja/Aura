@@ -64,8 +64,8 @@ public final class ChunkMeshExtractor {
                 vertices[t + 6] = (source.get(so + colorOffset + 3) & 0xFF) / 255.0f;
             }
             if (uv0Offset >= 0) {
-                vertices[t + 7] = source.getShort(so + uv0Offset) / 32768.0f;
-                vertices[t + 8] = source.getShort(so + uv0Offset + 2) / 32768.0f;
+                vertices[t + 7] = source.getFloat(so + uv0Offset);
+                vertices[t + 8] = source.getFloat(so + uv0Offset + 4);
             }
             if (lightOffset >= 0) {
                 vertices[t + 9] = (source.getShort(so + lightOffset) & 0xFFFF) / 65535.0f;
