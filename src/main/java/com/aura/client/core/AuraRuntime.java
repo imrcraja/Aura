@@ -47,6 +47,11 @@ public final class AuraRuntime {
 
     public static boolean isInitialized() { return renderer != null; }
 
+    public static void observeChunkRebuildTask(net.minecraft.client.render.chunk.ChunkBuilder.BuiltChunk.Task task) {
+        // Extraction is intentionally deferred until a version-safe RenderData bridge exists.
+        // Keeping the task reference out of the runtime avoids retaining chunk rebuild state.
+    }
+
     public static void observeRenderLayer(RenderLayer layer) {
         if (minecraft1201Adapter == null) return;
         // Layer observation is intentionally side-effect free until the version-specific
