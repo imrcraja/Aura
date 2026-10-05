@@ -181,7 +181,10 @@ public final class AuraRuntime {
             chunkGpuCache.clear();
             chunkGpuCache = null;
         }
-        chunkMeshCache = null;
+        if (chunkMeshCache != null) {
+            chunkMeshCache.clear();
+            chunkMeshCache = null;
+        }
         if (renderer != null) {
             renderer.shutdown();
             renderer = null;
