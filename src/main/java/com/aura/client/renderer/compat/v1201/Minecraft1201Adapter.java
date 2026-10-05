@@ -2,20 +2,24 @@ package com.aura.client.renderer.compat.v1201;
 
 import com.aura.client.core.AuraSafeExecutor;
 import com.aura.client.renderer.compat.VersionAdapter;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.util.math.MatrixStack;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import org.joml.Matrix4f;
 
 /**
- * Minecraft 1.20.1 adapter.
+ * 1.20.1 version adapter.
  *
- * Fabric exposes the render lifecycle and the prepared render-chunk boundary, but it does
- * not expose vanilla chunk meshes as AuraMesh objects. This adapter therefore captures the
- * per-frame render context without replacing vanilla terrain. A future mixin/bridge can feed
- * the version-neutral mesh pipeline without changing the renderer core.
+ * Exposes the render-layer boundary and camera matrices to the version-neutral runtime.
+ * The adapter never cancels vanilla rendering; replacement is enabled only when a concrete
+ * mesh/material bridge is available.
  */
 public final class Minecraft1201Adapter implements VersionAdapter {
     private boolean attached;
     private WorldRenderContext currentContext;
+    private RenderLayer currentLayer;
+    private Matrix4f currentPositionMatrix;
 
     @Override public String minecraftVersion() { return "1.20.1"; }
 
@@ -24,20 +28,28 @@ public final class Minecraft1201Adapter implements VersionAdapter {
         if (attached) return;
         WorldRenderEvents.START.register(context -> AuraSafeExecutor.run(() -> currentContext = context));
         WorldRenderEvents.AFTER_SETUP.register(context -> AuraSafeExecutor.run(() -> currentContext = context));
-        WorldRenderEvents.END.register(context -> AuraSafeExecutor.run(() -> currentContext = null));
+        WorldRenderEvents.END.register(context -> AuraSafeExecutor.run(() -> {
+            currentContext = null;
+            currentLayer = null;
+            currentPositionMatrix = null;
+        }));
         attached = true;
     }
 
-    public WorldRenderContext currentContext() {
-        return currentContext;
+    public void observe(RenderLayer layer, MatrixStack matrices) {
+        currentLayer = layer;
+        currentPositionMatrix = matrices.peek().getPositionMatrix();
     }
 
-    public boolean hasRenderContext() {
-        return currentContext != null;
-    }
+    public WorldRenderContext currentContext() { return currentContext; }
+    public RenderLayer currentLayer() { return currentLayer; }
+    public Matrix4f currentPositionMatrix() { return currentPositionMatrix; }
+    public boolean hasRenderContext() { return currentContext != null; }
 
     @Override public void detach() {
         currentContext = null;
+        currentLayer = null;
+        currentPositionMatrix = null;
         attached = false;
     }
 }
