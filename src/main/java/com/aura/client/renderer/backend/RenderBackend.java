@@ -8,6 +8,9 @@ public interface RenderBackend {
     void shutdown();
     boolean isAvailable();
 
+    /** Returns true when the backend owns a usable GPU context. */
+    default boolean isContextReady() { return false; }
+
     default RenderMesh createMesh(String label, int vertexCount, int indexCount) {
         throw new UnsupportedOperationException(id() + " does not implement mesh creation yet");
     }
