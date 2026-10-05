@@ -56,7 +56,11 @@ The long-term target is a single Aura renderer core that can serve Minecraft ver
 
 ## Status
 
-**Alpha — active development.** The repository contains the stable architecture, bounded adaptive memory profile, backend boundaries, 1.20.1 lifecycle integration and frame telemetry. The production Vulkan renderer and full vanilla chunk-render replacement are still under active implementation and are not falsely marked as complete.
+**Alpha — active development.**
+
+### Production hardening
+
+The 1.20.1 pipeline includes bounded CPU/GPU caches, revision-safe chunk uploads, canonical terrain attribute extraction, backend initialization fallback, OpenGL GPU terrain resources, and regression tests for core mesh/cache invariants. The repository contains the stable architecture, bounded adaptive memory profile, backend boundaries, 1.20.1 lifecycle integration and frame telemetry. The production Vulkan renderer and full vanilla chunk-render replacement are still under active implementation and are not falsely marked as complete.
 
 ## License and attribution
 
