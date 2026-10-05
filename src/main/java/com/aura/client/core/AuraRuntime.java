@@ -95,7 +95,7 @@ public final class AuraRuntime {
     public static void observeRenderLayer(RenderLayer layer, MatrixStack matrices, Matrix4f positionMatrix) {
         if (minecraft1201Adapter == null) return;
         minecraft1201Adapter.observe(layer, matrices, positionMatrix);
-        drainGpuUploads(8);
+        drainGpuUploads(performanceManager == null ? 8 : performanceManager.uploadBudget());
     }
 
     /**
