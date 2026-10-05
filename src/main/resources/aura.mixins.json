@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_17",
   "client": [
     "WorldRendererAuraMixin",
-    "ChunkBuilderAuraMixin"
+    "ChunkBuilderAuraMixin",
+    "BuiltChunkAuraMixin"
   ],
   "injectors": {
     "defaultRequire": 1

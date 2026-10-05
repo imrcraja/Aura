@@ -3,11 +3,13 @@ package com.aura.client.core;
 import com.aura.client.renderer.AuraRenderer;
 import com.aura.client.renderer.backend.RenderBackendSelector;
 import com.aura.client.renderer.compat.v1201.Minecraft1201Adapter;
+import com.aura.client.renderer.chunk.AuraChunkBufferRegistry;
 import com.aura.client.renderer.chunk.ChunkGpuCache;
 import com.aura.client.renderer.chunk.ChunkMeshCache;
 import com.aura.client.renderer.chunk.ChunkMeshData;
 import com.aura.client.renderer.chunk.ChunkMeshExtractor;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.util.math.MatrixStack;
@@ -54,12 +56,14 @@ public final class AuraRuntime {
 
     public static void observeChunkRebuild() {}
 
-    public static void observeBuiltBuffer(BufferBuilder.BuiltBuffer builtBuffer) {
-        if (!isInitialized() || builtBuffer == null) return;
+    public static void observeBuiltBuffer(BufferBuilder.BuiltBuffer builtBuffer, VertexBuffer glBuffer) {
+        if (!isInitialized() || builtBuffer == null || glBuffer == null || chunkMeshCache == null) return;
+        AuraChunkBufferRegistry.Binding binding = AuraChunkBufferRegistry.resolve(glBuffer);
+        if (binding == null) return;
+
         ChunkMeshData extracted = ChunkMeshExtractor.fromBuiltBuffer(builtBuffer);
         if (extracted == null || extracted.indexCount() == 0) return;
-        // Chunk identity/material mapping is intentionally deferred until the replacement
-        // path can preserve vanilla render-layer semantics.
+        chunkMeshCache.put(binding.key(), extracted);
     }
 
     public static void observeRenderLayer(RenderLayer layer, MatrixStack matrices, Matrix4f positionMatrix) {
