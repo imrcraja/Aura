@@ -23,11 +23,13 @@ public final class OpenGlBackend implements RenderBackend {
     @Override public void initialize() { initialized = true; contextReady = false; }
     @Override public void shutdown() { contextReady = false; initialized = false; }
     @Override public boolean isAvailable() { return true; }
+    @Override public boolean isContextReady() { return initialized && contextReady; }
 
     private void requireInitialized() {
         if (!initialized) throw new IllegalStateException("Aura OpenGL backend is not initialized");
     }
 
+    /** Called only from the render thread after Minecraft has made the GL context current. */
     private void markContextReady() { contextReady = true; }
 
     @Override public RenderMesh createMesh(String label, int vertexCount, int indexCount) {
