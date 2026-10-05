@@ -23,12 +23,22 @@ public final class ChunkGpuCache {
 
     public synchronized RenderMesh upload(RenderBackend backend, ChunkMeshCache.Key key, ChunkMeshData mesh) {
         if (backend == null || key == null || mesh == null) throw new IllegalArgumentException("backend, key and mesh are required");
-        RenderMesh old = entries.remove(key);
-        if (old != null) usedBytes -= old.estimatedBytes();
         RenderMesh uploaded = backend.uploadChunkMesh(
                 "chunk-" + key.x() + "-" + key.y() + "-" + key.z() + "-" + key.layer(), mesh);
+        if (uploaded == null) throw new IllegalStateException("backend returned a null GPU mesh");
+        long uploadedBytes = Math.max(0L, uploaded.estimatedBytes());
+        if (uploadedBytes > budgetBytes) {
+            // Keep the previous resident resource rather than caching an entry that
+            // trim() would immediately close and return to the caller as unusable.
+            uploaded.close();
+            return null;
+        }
+
+        RenderMesh old = entries.remove(key);
+        if (old != null) usedBytes -= old.estimatedBytes();
         entries.put(key, uploaded);
-        usedBytes += uploaded.estimatedBytes();
+        usedBytes += uploadedBytes;
+        if (old != null) old.close();
         trim();
         return uploaded;
     }
