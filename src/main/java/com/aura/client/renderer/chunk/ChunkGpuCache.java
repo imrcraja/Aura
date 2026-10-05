@@ -3,10 +3,11 @@ package com.aura.client.renderer.chunk;
 import com.aura.client.renderer.backend.RenderBackend;
 import com.aura.client.renderer.backend.RenderMesh;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-/** Reuses backend mesh handles with a bounded byte budget and explicit cleanup. */
 public final class ChunkGpuCache {
     private final long budgetBytes;
     private long usedBytes;
@@ -52,6 +53,16 @@ public final class ChunkGpuCache {
             }
         }
         return removed;
+    }
+
+    public synchronized List<Map.Entry<ChunkMeshCache.Key, RenderMesh>> snapshotForLayer(String layer) {
+        List<Map.Entry<ChunkMeshCache.Key, RenderMesh>> result = new ArrayList<>();
+        for (Map.Entry<ChunkMeshCache.Key, RenderMesh> entry : entries.entrySet()) {
+            if (layer == null || layer.equals(entry.getKey().layer())) {
+                result.add(Map.entry(entry.getKey(), entry.getValue()));
+            }
+        }
+        return result;
     }
 
     public synchronized void clear() {
