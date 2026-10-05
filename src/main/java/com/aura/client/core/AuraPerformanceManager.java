@@ -2,11 +2,7 @@ package com.aura.client.core;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 
-/**
- * Connects version-neutral performance telemetry to Fabric's 1.20.1 world-render
- * lifecycle. Later version adapters can feed the same manager without changing
- * the renderer core.
- */
+/** Lightweight frame telemetry with no render-path allocations per frame. */
 public final class AuraPerformanceManager {
     private final AuraFrameProfiler profiler = new AuraFrameProfiler();
     private boolean registered;
@@ -14,11 +10,9 @@ public final class AuraPerformanceManager {
     public void register() {
         if (registered) return;
         registered = true;
-        WorldRenderEvents.START.register(context -> profiler.beginFrame());
-        WorldRenderEvents.END.register(context -> profiler.endFrame());
+        WorldRenderEvents.START.register(context -> AuraSafeExecutor.run(profiler::beginFrame));
+        WorldRenderEvents.END.register(context -> AuraSafeExecutor.run(profiler::endFrame));
     }
 
-    public AuraFrameProfiler profiler() {
-        return profiler;
-    }
+    public AuraFrameProfiler profiler() { return profiler; }
 }
