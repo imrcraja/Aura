@@ -1,6 +1,7 @@
 package com.aura.client.core;
 
 import com.aura.client.renderer.AuraRenderer;
+import net.minecraft.client.render.RenderLayer;
 import com.aura.client.renderer.backend.RenderBackendSelector;
 import com.aura.client.renderer.compat.v1201.Minecraft1201Adapter;
 import com.aura.client.renderer.chunk.ChunkGpuCache;
@@ -42,6 +43,13 @@ public final class AuraRuntime {
     public static AuraDeviceProfile deviceProfile() {
         if (deviceProfile == null) throw new IllegalStateException("Aura has not been initialized");
         return deviceProfile;
+    }
+
+    public static boolean isInitialized() { return renderer != null; }
+
+    public static void observeRenderLayer(RenderLayer layer) {
+        // Observation boundary only; vanilla remains authoritative until Aura has a
+        // compatible vertex-format/material bridge for this layer.
     }
 
     public static AuraFrameProfiler frameProfiler() {
