@@ -1,11 +1,14 @@
 package com.aura.client.core;
 
 import com.aura.client.renderer.AuraRenderer;
-import net.minecraft.client.render.RenderLayer;
 import com.aura.client.renderer.backend.RenderBackendSelector;
 import com.aura.client.renderer.compat.v1201.Minecraft1201Adapter;
 import com.aura.client.renderer.chunk.ChunkGpuCache;
 import com.aura.client.renderer.chunk.ChunkMeshCache;
+import com.aura.client.renderer.chunk.ChunkMeshData;
+import com.aura.client.renderer.chunk.ChunkMeshExtractor;
+import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.RenderLayer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 
 /** Owns the long-lived Aura runtime. No Minecraft-version-specific renderer code belongs here. */
@@ -48,13 +51,20 @@ public final class AuraRuntime {
     public static boolean isInitialized() { return renderer != null; }
 
     public static void observeChunkRebuild() {
-        // Safe extraction boundary; no private Minecraft task type is retained.
+        // Retained as a lightweight compatibility hook for existing integrations.
+    }
+
+    public static void observeBuiltBuffer(BufferBuilder.BuiltBuffer builtBuffer) {
+        if (!isInitialized() || builtBuffer == null) return;
+        ChunkMeshData extracted = ChunkMeshExtractor.fromBuiltBuffer(builtBuffer);
+        if (extracted == null || extracted.indexCount() == 0) return;
+        // Extraction is intentionally not uploaded/replaced yet: a chunk identity/material
+        // mapping is required before the canonical mesh can safely enter the GPU cache.
     }
 
     public static void observeRenderLayer(RenderLayer layer) {
         if (minecraft1201Adapter == null) return;
-        // Layer observation is intentionally side-effect free until the version-specific
-        // vertex/material extraction bridge is ready.
+        // Layer observation remains side-effect free until material/texture mapping is ready.
     }
 
     public static AuraFrameProfiler frameProfiler() {
