@@ -9,6 +9,8 @@ import com.aura.client.renderer.chunk.ChunkMeshCache;
 import com.aura.client.renderer.culling.AuraFrustum;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Stable renderer facade shared by all supported Minecraft version adapters. */
 public final class AuraRenderer {
@@ -34,8 +36,10 @@ public final class AuraRenderer {
                              AuraFrustum frustum,
                              Collection<VisibleMesh> meshes) {
         batcher.clear();
+        Set<ChunkMeshCache.Key> candidateSet = candidates instanceof Set<ChunkMeshCache.Key> set
+                ? set : new HashSet<>(candidates);
         for (VisibleMesh mesh : meshes) {
-            if (candidates.contains(mesh.key()) && frustum.isVisible(
+            if (candidateSet.contains(mesh.key()) && frustum.isVisible(
                     mesh.minX(), mesh.minY(), mesh.minZ(),
                     mesh.maxX(), mesh.maxY(), mesh.maxZ())) {
                 batcher.add(mesh.materialKey(), mesh.mesh());
