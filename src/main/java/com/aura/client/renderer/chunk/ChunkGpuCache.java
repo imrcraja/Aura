@@ -6,7 +6,7 @@ import com.aura.client.renderer.backend.RenderMesh;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Reuses backend mesh handles and bounds their CPU-side ownership. */
+/** Reuses backend mesh handles with bounded ownership and explicit cleanup. */
 public final class ChunkGpuCache {
     private final int maxEntries;
     private final LinkedHashMap<ChunkMeshCache.Key, RenderMesh> entries =
@@ -17,15 +17,13 @@ public final class ChunkGpuCache {
         this.maxEntries = maxEntries;
     }
 
-    public synchronized RenderMesh get(ChunkMeshCache.Key key) {
-        return entries.get(key);
-    }
+    public synchronized RenderMesh get(ChunkMeshCache.Key key) { return entries.get(key); }
 
     public synchronized RenderMesh upload(RenderBackend backend, ChunkMeshCache.Key key, ChunkMeshData mesh) {
         RenderMesh old = entries.remove(key);
         if (old != null) old.close();
-
-        RenderMesh uploaded = backend.uploadChunkMesh("chunk-" + key.x() + "-" + key.y() + "-" + key.z(), mesh);
+        RenderMesh uploaded = backend.uploadChunkMesh(
+                "chunk-" + key.x() + "-" + key.y() + "-" + key.z(), mesh);
         entries.put(key, uploaded);
         trim();
         return uploaded;
