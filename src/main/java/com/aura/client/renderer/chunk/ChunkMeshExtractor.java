@@ -10,8 +10,8 @@ import java.nio.ByteOrder;
 /**
  * Decodes vanilla 1.20.1 chunk vertex buffers into Aura's canonical position-only mesh.
  *
- * This is intentionally an extraction bridge: it does not alter or cancel vanilla
- * rendering, and it only accepts POSITION elements encoded as three FLOAT components.
+ * This bridge preserves the vanilla draw mode by expanding supported triangle primitives
+ * into an indexed triangle list. It never changes or cancels vanilla rendering.
  */
 public final class ChunkMeshExtractor {
     private ChunkMeshExtractor() {}
@@ -63,14 +63,70 @@ public final class ChunkMeshExtractor {
             positions[vertex * 3 + 2] = source.getFloat(offset + Float.BYTES * 2);
         }
 
-        return positions(positions, sequentialTriangles(vertexCount));
+        int[] indices = triangleIndices(parameters.mode(), vertexCount);
+        if (indices.length == 0) return null;
+        return positions(positions, indices);
+    }
+
+    private static int[] triangleIndices(VertexFormat.DrawMode mode, int vertexCount) {
+        return switch (mode) {
+            case TRIANGLES -> sequentialTriangles(vertexCount);
+            case QUADS -> quadsToTriangles(vertexCount);
+            case TRIANGLE_STRIP -> triangleStrip(vertexCount);
+            case TRIANGLE_FAN -> triangleFan(vertexCount);
+            default -> new int[0];
+        };
     }
 
     private static int[] sequentialTriangles(int vertexCount) {
-        int triangleVertices = vertexCount - (vertexCount % 3);
-        int[] indices = new int[triangleVertices];
-        for (int i = 0; i < triangleVertices; i++) {
-            indices[i] = i;
+        int count = vertexCount - (vertexCount % 3);
+        int[] indices = new int[count];
+        for (int i = 0; i < count; i++) indices[i] = i;
+        return indices;
+    }
+
+    private static int[] quadsToTriangles(int vertexCount) {
+        int quadCount = vertexCount / 4;
+        int[] indices = new int[quadCount * 6];
+        int out = 0;
+        for (int quad = 0; quad < quadCount; quad++) {
+            int base = quad * 4;
+            indices[out++] = base;
+            indices[out++] = base + 1;
+            indices[out++] = base + 2;
+            indices[out++] = base;
+            indices[out++] = base + 2;
+            indices[out++] = base + 3;
+        }
+        return indices;
+    }
+
+    private static int[] triangleStrip(int vertexCount) {
+        if (vertexCount < 3) return new int[0];
+        int[] indices = new int[(vertexCount - 2) * 3];
+        int out = 0;
+        for (int i = 0; i < vertexCount - 2; i++) {
+            if ((i & 1) == 0) {
+                indices[out++] = i;
+                indices[out++] = i + 1;
+                indices[out++] = i + 2;
+            } else {
+                indices[out++] = i + 1;
+                indices[out++] = i;
+                indices[out++] = i + 2;
+            }
+        }
+        return indices;
+    }
+
+    private static int[] triangleFan(int vertexCount) {
+        if (vertexCount < 3) return new int[0];
+        int[] indices = new int[(vertexCount - 2) * 3];
+        int out = 0;
+        for (int i = 1; i < vertexCount - 1; i++) {
+            indices[out++] = 0;
+            indices[out++] = i;
+            indices[out++] = i + 1;
         }
         return indices;
     }
