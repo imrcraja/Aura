@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-/** Stable renderer facade shared by all supported Minecraft version adapters. */
 public final class AuraRenderer {
     private final RenderBackend backend;
     private final AuraDeviceProfile deviceProfile;
@@ -37,10 +36,25 @@ public final class AuraRenderer {
     public boolean active() { return active; }
     public Throwable lastFailure() { return lastFailure; }
 
-    /**
-     * Records visible cached meshes through one command list. A backend failure disables only
-     * the optional Aura path; vanilla Minecraft remains responsible for the normal frame.
-     */
+    public int drawMeshes(Collection<RenderMesh> meshes) {
+        if (!active || meshes == null || meshes.isEmpty()) return 0;
+        try (RenderCommandList commands = backend.createCommandList()) {
+            commands.begin();
+            int count = 0;
+            for (RenderMesh mesh : meshes) {
+                if (mesh == null) continue;
+                commands.draw(mesh);
+                count++;
+            }
+            commands.end();
+            return count;
+        } catch (RuntimeException failure) {
+            lastFailure = failure;
+            active = false;
+            return 0;
+        }
+    }
+
     public int renderVisible(Collection<ChunkMeshCache.Key> candidates,
                              AuraFrustum frustum,
                              Collection<VisibleMesh> meshes) {
