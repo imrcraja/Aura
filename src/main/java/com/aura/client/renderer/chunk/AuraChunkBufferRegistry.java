@@ -43,6 +43,11 @@ public final class AuraChunkBufferRegistry {
         return new Binding(seed.x(), seed.y(), seed.z(), seed.section(), seed.layer(), seed.revision());
     }
 
+    public static synchronized void clear() {
+        BUFFERS.clear();
+        REVISIONS.clear();
+    }
+
     public static synchronized void unbind(ChunkBuilder.BuiltChunk chunk) {
         if (chunk == null) return;
         BUFFERS.entrySet().removeIf(entry -> entry.getValue().chunk() == chunk);
