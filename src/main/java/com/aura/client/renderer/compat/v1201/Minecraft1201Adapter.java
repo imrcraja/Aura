@@ -1,7 +1,7 @@
 package com.aura.client.renderer.compat.v1201;
 
 import com.aura.client.core.AuraSafeExecutor;
-import com.aura.client.renderer.compat.VersionAdapter;
+import com.aura.client.renderer.backend.compat.VersionAdapter;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.render.RenderLayer;
