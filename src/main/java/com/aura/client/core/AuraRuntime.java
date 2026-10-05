@@ -67,6 +67,12 @@ public final class AuraRuntime {
         if (extracted == null || extracted.indexCount() == 0) return;
 
         ChunkMeshCache.Key key = binding.key();
+        chunkMeshCache.removeOlderRevisions(
+                key.x(), key.y(), key.z(), key.section(), key.layer(), key.revision());
+        chunkGpuCache.removeOlderRevisions(
+                key.x(), key.y(), key.z(), key.section(), key.layer(), key.revision());
+        gpuUploadQueue.removeOlderRevisions(
+                key.x(), key.y(), key.z(), key.section(), key.layer(), key.revision());
         chunkMeshCache.put(key, extracted);
         gpuUploadQueue.offer(key, extracted, glBuffer);
     }
@@ -75,11 +81,17 @@ public final class AuraRuntime {
     public static int drainGpuUploads(int maxUploads) {
         if (!isInitialized() || maxUploads <= 0 || gpuUploadQueue == null || chunkGpuCache == null) return 0;
         int uploaded = 0;
-        for (; uploaded < maxUploads; uploaded++) {
+        while (uploaded < maxUploads) {
             AuraGpuUploadQueue.Pending pending = gpuUploadQueue.poll();
             if (pending == null) break;
+
+            // A newer rebuild may have replaced this key while the upload was queued.
+            // Never upload stale geometry back over a newer CPU cache entry.
+            if (chunkMeshCache.get(pending.key()) != pending.mesh()) continue;
+
             try {
                 chunkGpuCache.upload(renderer.backend(), pending.key(), pending.mesh());
+                uploaded++;
             } catch (RuntimeException failure) {
                 gpuUploadQueue.offer(pending.key(), pending.mesh(), pending.vanillaBuffer());
                 break;
