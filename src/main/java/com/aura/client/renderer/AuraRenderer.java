@@ -55,6 +55,25 @@ public final class AuraRenderer {
         }
     }
 
+    public int drawPositionedMeshes(Collection<PositionedMesh> meshes) {
+        if (!active || meshes == null || meshes.isEmpty()) return 0;
+        try (RenderCommandList commands = backend.createCommandList()) {
+            commands.begin();
+            int count = 0;
+            for (PositionedMesh positioned : meshes) {
+                if (positioned == null || positioned.mesh() == null) continue;
+                commands.draw(positioned.mesh(), positioned.x(), positioned.y(), positioned.z());
+                count++;
+            }
+            commands.end();
+            return count;
+        } catch (RuntimeException failure) {
+            lastFailure = failure;
+            active = false;
+            return 0;
+        }
+    }
+
     public int renderVisible(Collection<ChunkMeshCache.Key> candidates,
                              AuraFrustum frustum,
                              Collection<VisibleMesh> meshes) {
@@ -88,6 +107,8 @@ public final class AuraRenderer {
             return 0;
         }
     }
+
+    public record PositionedMesh(RenderMesh mesh, double x, double y, double z) {}
 
     public record VisibleMesh(ChunkMeshCache.Key key, String materialKey, RenderMesh mesh,
                               double minX, double minY, double minZ,

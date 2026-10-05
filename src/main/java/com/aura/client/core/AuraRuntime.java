@@ -105,23 +105,30 @@ public final class AuraRuntime {
      */
     public static int renderCachedLayer(RenderLayer layer, double cameraX, double cameraY, double cameraZ) {
         if (!isInitialized() || layer == null || chunkGpuCache == null) return 0;
+        if (!Boolean.parseBoolean(System.getProperty("aura.render.cached_terrain", "false"))) return 0;
         String layerKey = AuraChunkBufferRegistry.layerKey(layer);
         var entries = chunkGpuCache.snapshotForLayer(layerKey);
         if (entries.isEmpty()) return 0;
 
         int maxDistance = Math.max(16, Integer.getInteger("aura.render.distance", 12) * 16);
         long maxDistanceSq = (long) maxDistance * maxDistance;
-        java.util.ArrayList<com.aura.client.renderer.backend.RenderMesh> visible = new java.util.ArrayList<>();
+        java.util.ArrayList<AuraRenderer.PositionedMesh> visible = new java.util.ArrayList<>();
         for (var entry : entries) {
             ChunkMeshCache.Key key = entry.getKey();
             double dx = key.x() + 8.0 - cameraX;
             double dy = key.y() + 8.0 - cameraY;
             double dz = key.z() + 8.0 - cameraZ;
             if (dx * dx + dy * dy + dz * dz <= maxDistanceSq) {
-                visible.add(entry.getValue());
+                visible.add(new AuraRenderer.PositionedMesh(entry.getValue(), key.x(), key.y(), key.z()));
             }
         }
-        return renderer.drawMeshes(visible);
+        if (visible.isEmpty()) return 0;
+        layer.startDrawing();
+        try {
+            return renderer.drawPositionedMeshes(visible);
+        } finally {
+            layer.endDrawing();
+        }
     }
 
     public static AuraFrameProfiler frameProfiler() {

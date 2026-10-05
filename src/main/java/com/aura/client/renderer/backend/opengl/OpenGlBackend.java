@@ -7,6 +7,8 @@ import com.aura.client.renderer.backend.RenderTexture;
 import com.aura.client.renderer.chunk.ChunkMeshData;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL30;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.gl.ShaderProgram;
 
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -145,11 +147,25 @@ public final class OpenGlBackend implements RenderBackend {
             recording = true;
         }
         @Override public void draw(RenderMesh mesh) {
+            draw(mesh, 0.0, 0.0, 0.0);
+        }
+
+        @Override public void draw(RenderMesh mesh, double offsetX, double offsetY, double offsetZ) {
             if (!recording) throw new IllegalStateException("Command list is not recording");
             if (!(mesh instanceof OpenGlMesh glMesh) || glMesh.indexCount <= 0 || glMesh.vao == 0) return;
+
+            ShaderProgram shader = RenderSystem.getShader();
+            if (shader != null && shader.chunkOffset != null) {
+                shader.chunkOffset.set((float) offsetX, (float) offsetY, (float) offsetZ);
+            }
+
             GL30.glBindVertexArray(glMesh.vao);
             GL15.glDrawElements(GL15.GL_TRIANGLES, glMesh.indexCount, GL15.GL_UNSIGNED_INT, 0L);
             GL30.glBindVertexArray(0);
+
+            if (shader != null && shader.chunkOffset != null) {
+                shader.chunkOffset.set(0.0f, 0.0f, 0.0f);
+            }
         }
         @Override public void end() { recording = false; }
         @Override public void close() { if (recording) end(); }
