@@ -7,9 +7,11 @@ import com.aura.client.renderer.chunk.ChunkGpuCache;
 import com.aura.client.renderer.chunk.ChunkMeshCache;
 import com.aura.client.renderer.chunk.ChunkMeshData;
 import com.aura.client.renderer.chunk.ChunkMeshExtractor;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.minecraft.client.util.math.MatrixStack;
+import org.joml.Matrix4f;
 
 /** Owns the long-lived Aura runtime. No Minecraft-version-specific renderer code belongs here. */
 public final class AuraRuntime {
@@ -50,21 +52,19 @@ public final class AuraRuntime {
 
     public static boolean isInitialized() { return renderer != null; }
 
-    public static void observeChunkRebuild() {
-        // Retained as a lightweight compatibility hook for existing integrations.
-    }
+    public static void observeChunkRebuild() {}
 
     public static void observeBuiltBuffer(BufferBuilder.BuiltBuffer builtBuffer) {
         if (!isInitialized() || builtBuffer == null) return;
         ChunkMeshData extracted = ChunkMeshExtractor.fromBuiltBuffer(builtBuffer);
         if (extracted == null || extracted.indexCount() == 0) return;
-        // Extraction is intentionally not uploaded/replaced yet: a chunk identity/material
-        // mapping is required before the canonical mesh can safely enter the GPU cache.
+        // Chunk identity/material mapping is intentionally deferred until the replacement
+        // path can preserve vanilla render-layer semantics.
     }
 
-    public static void observeRenderLayer(RenderLayer layer) {
+    public static void observeRenderLayer(RenderLayer layer, MatrixStack matrices, Matrix4f positionMatrix) {
         if (minecraft1201Adapter == null) return;
-        // Layer observation remains side-effect free until material/texture mapping is ready.
+        minecraft1201Adapter.observe(layer, matrices, positionMatrix);
     }
 
     public static AuraFrameProfiler frameProfiler() {
