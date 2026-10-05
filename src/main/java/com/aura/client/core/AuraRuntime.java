@@ -1,7 +1,9 @@
 package com.aura.client.core;
 
 import com.aura.client.renderer.AuraRenderer;
+import com.aura.client.renderer.backend.RenderBackend;
 import com.aura.client.renderer.backend.RenderBackendSelector;
+import com.aura.client.renderer.backend.opengl.OpenGlBackend;
 import com.aura.client.renderer.compat.v1201.Minecraft1201Adapter;
 import com.aura.client.renderer.chunk.AuraChunkBufferRegistry;
 import com.aura.client.renderer.chunk.AuraGpuUploadQueue;
@@ -29,8 +31,20 @@ public final class AuraRuntime {
 
     public static void initialize() {
         deviceProfile = AuraDeviceProfile.detect();
-        renderer = new AuraRenderer(RenderBackendSelector.select(), deviceProfile);
-        renderer.initialize();
+        RenderBackend selected = RenderBackendSelector.select();
+        renderer = new AuraRenderer(selected, deviceProfile);
+        try {
+            renderer.initialize();
+        } catch (RuntimeException primaryFailure) {
+            // A launcher may expose a backend capability that fails during actual
+            // context initialization. Never leave the client without a renderer.
+            if (!"opengl".equals(selected.id())) {
+                renderer = new AuraRenderer(new OpenGlBackend(), deviceProfile);
+                renderer.initialize();
+            } else {
+                throw primaryFailure;
+            }
+        }
         long cacheBudget = AuraAdaptiveCache.budgetBytes(deviceProfile);
         chunkMeshCache = new ChunkMeshCache(cacheBudget);
         chunkGpuCache = new ChunkGpuCache(cacheBudget);
