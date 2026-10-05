@@ -105,7 +105,10 @@ public final class AuraRuntime {
      */
     public static int renderCachedLayer(RenderLayer layer, double cameraX, double cameraY, double cameraZ) {
         if (!isInitialized() || layer == null || chunkGpuCache == null) return 0;
+        // Cached terrain remains opt-in until shader/material parity with every vanilla
+        // render layer is verified. This prevents duplicate terrain in normal gameplay.
         if (!Boolean.parseBoolean(System.getProperty("aura.render.cached_terrain", "false"))) return 0;
+        if (!renderer.backend().isContextReady()) return 0;
         String layerKey = AuraChunkBufferRegistry.layerKey(layer);
         var entries = chunkGpuCache.snapshotForLayer(layerKey);
         if (entries.isEmpty()) return 0;
