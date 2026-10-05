@@ -3,11 +3,10 @@ package com.aura.client.mixin;
 import com.aura.client.core.AuraSafeExecutor;
 import com.aura.client.core.AuraRuntime;
 import net.minecraft.client.render.chunk.ChunkBuilder;
-import net.minecraft.client.render.chunk.ChunkRendererRegionBuilder;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Safe 1.20.1 chunk rebuild boundary.
@@ -17,11 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(ChunkBuilder.BuiltChunk.class)
 public abstract class ChunkBuilderAuraMixin {
-    @Inject(method = "createRebuildTask", at = @At("RETURN"))
-    private void aura$observeRebuildTask(
-            ChunkRendererRegionBuilder builder,
-            CallbackInfoReturnable<ChunkBuilder.BuiltChunk.Task> cir
-    ) {
-        AuraSafeExecutor.run(() -> AuraRuntime.observeChunkRebuildTask(cir.getReturnValue()));
+    @Inject(method = "createRebuildTask", at = @At("HEAD"))
+    private void aura$observeRebuildTask(CallbackInfo ci) {
+        AuraSafeExecutor.run(AuraRuntime::observeChunkRebuild);
     }
 }
