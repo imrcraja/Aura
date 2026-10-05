@@ -1,8 +1,16 @@
 package com.aura.client.renderer.backend.vulkan;
 
 import com.aura.client.renderer.backend.RenderBackend;
+import com.aura.client.renderer.backend.RenderCommandList;
+import com.aura.client.renderer.backend.RenderMesh;
+import com.aura.client.renderer.backend.RenderTexture;
+import com.aura.client.renderer.chunk.ChunkMeshData;
 
-/** Safe Vulkan capability boundary; native context ownership stays with the launcher/runtime. */
+/**
+ * Vulkan capability boundary. Native Vulkan device/swapchain ownership is intentionally
+ * delegated to the launcher/runtime until a loader/device handle can be obtained safely.
+ * This backend never pretends to be available merely because Android exposes Vulkan.
+ */
 public final class VulkanBackend implements RenderBackend {
     private boolean initialized;
 
@@ -18,7 +26,29 @@ public final class VulkanBackend implements RenderBackend {
     @Override public boolean isAvailable() {
         if (!Boolean.parseBoolean(System.getProperty("aura.vulkan.enabled", "false"))) return false;
         String os = System.getProperty("os.name", "").toLowerCase();
-        return os.contains("linux") || os.contains("android") || os.contains("windows");
+        if (!(os.contains("linux") || os.contains("android") || os.contains("windows"))) return false;
+
+        // Explicit runtime contract: a launcher/host must provide a native Vulkan context.
+        String handle = System.getProperty("aura.vulkan.context");
+        return handle != null && !handle.isBlank();
+    }
+
+    @Override public boolean isContextReady() { return initialized; }
+
+    @Override public RenderMesh createMesh(String label, int vertexCount, int indexCount) {
+        throw new UnsupportedOperationException("Vulkan native resource bridge is not installed");
+    }
+
+    @Override public RenderMesh uploadChunkMesh(String label, ChunkMeshData mesh) {
+        throw new UnsupportedOperationException("Vulkan native resource bridge is not installed");
+    }
+
+    @Override public RenderTexture createTexture(String label, int width, int height) {
+        throw new UnsupportedOperationException("Vulkan native resource bridge is not installed");
+    }
+
+    @Override public RenderCommandList createCommandList() {
+        throw new UnsupportedOperationException("Vulkan native resource bridge is not installed");
     }
 
     public boolean initialized() { return initialized; }
