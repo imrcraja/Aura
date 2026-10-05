@@ -4,5 +4,9 @@ public interface RenderCommandList extends AutoCloseable {
     void begin();
     void draw(RenderMesh mesh);
     void end();
-    @Override default void close() { end(); }
+
+    @Override
+    default void close() {
+        end();
+    }
 }
