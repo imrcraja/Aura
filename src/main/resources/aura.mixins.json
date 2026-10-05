@@ -3,7 +3,8 @@
   "package": "com.aura.client.mixin",
   "compatibilityLevel": "JAVA_17",
   "client": [
-    "WorldRendererAuraMixin"
+    "WorldRendererAuraMixin",
+    "ChunkBuilderAuraMixin"
   ],
   "injectors": {
     "defaultRequire": 1
