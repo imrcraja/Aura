@@ -15,6 +15,30 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public final class WorldRendererAuraMixin {
     @Inject(
             method = "renderLayer(Lnet/minecraft/client/render/RenderLayer;Lnet/minecraft/client/util/math/MatrixStack;DDDLorg/joml/Matrix4f;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void aura$renderTerrainReplacement(
+            RenderLayer renderLayer,
+            MatrixStack matrices,
+            double cameraX,
+            double cameraY,
+            double cameraZ,
+            Matrix4f positionMatrix,
+            CallbackInfo ci
+    ) {
+        AuraSafeExecutor.run(() -> {
+            if (!AuraRuntime.isInitialized()) return;
+            if (AuraRuntime.renderReplacementLayer(
+                    renderLayer, cameraX, cameraY, cameraZ,
+                    ((WorldRenderer) (Object) this).getCompletedChunkCount())) {
+                ci.cancel();
+            }
+        });
+    }
+
+    @Inject(
+            method = "renderLayer(Lnet/minecraft/client/render/RenderLayer;Lnet/minecraft/client/util/math/MatrixStack;DDDLorg/joml/Matrix4f;)V",
             at = @At("HEAD")
     )
     private void aura$observeRenderLayer(
