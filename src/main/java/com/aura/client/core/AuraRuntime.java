@@ -29,7 +29,8 @@ public final class AuraRuntime {
 
     private AuraRuntime() {}
 
-    public static void initialize() {
+    public static synchronized void initialize() {
+        if (isInitialized()) return;
         deviceProfile = AuraDeviceProfile.detect();
         RenderBackend selected = RenderBackendSelector.select();
         renderer = new AuraRenderer(selected, deviceProfile);
@@ -186,5 +187,6 @@ public final class AuraRuntime {
             renderer = null;
         }
         performanceManager = null;
+        AuraChunkBufferRegistry.clear();
     }
 }
