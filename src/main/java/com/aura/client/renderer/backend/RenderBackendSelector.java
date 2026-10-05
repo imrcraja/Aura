@@ -3,7 +3,7 @@ package com.aura.client.renderer.backend;
 import com.aura.client.renderer.backend.opengl.OpenGlBackend;
 import com.aura.client.renderer.backend.vulkan.VulkanBackend;
 
-/** Selects the safest available backend. Vulkan is opt-in until native capability probing is installed. */
+/** Chooses Vulkan only when explicitly enabled and available; otherwise uses OpenGL. */
 public final class RenderBackendSelector {
     private RenderBackendSelector() {}
 
