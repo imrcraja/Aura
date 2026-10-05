@@ -29,8 +29,9 @@ public final class VulkanBackend implements RenderBackend {
         if (!(os.contains("linux") || os.contains("android") || os.contains("windows"))) return false;
 
         // Explicit runtime contract: a launcher/host must provide a native Vulkan context.
-        String handle = System.getProperty("aura.vulkan.context");
-        return handle != null && !handle.isBlank();
+        // The Java-side backend is only selectable when a real native resource bridge
+        // has been installed by the host/launcher. A context string alone is not enough.
+        return Boolean.parseBoolean(System.getProperty("aura.vulkan.bridge", "false"));
     }
 
     @Override public boolean isContextReady() { return initialized; }
