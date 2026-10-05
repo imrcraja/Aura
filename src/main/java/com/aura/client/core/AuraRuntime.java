@@ -37,8 +37,6 @@ public final class AuraRuntime {
         try {
             renderer.initialize();
         } catch (RuntimeException primaryFailure) {
-            // A launcher may expose a backend capability that fails during actual
-            // context initialization. Never leave the client without a renderer.
             if (!"opengl".equals(selected.id())) {
                 renderer = new AuraRenderer(new OpenGlBackend(), deviceProfile);
                 renderer.initialize();
@@ -92,26 +90,17 @@ public final class AuraRuntime {
         gpuUploadQueue.offer(key, extracted, glBuffer);
     }
 
-    /** Render-thread-only GPU handoff. Limits uploads per frame to avoid rebuild spikes. */
     public static int drainGpuUploads(int maxUploads) {
         if (!isInitialized() || maxUploads <= 0 || gpuUploadQueue == null || chunkGpuCache == null) return 0;
         int uploaded = 0;
         while (uploaded < maxUploads) {
             AuraGpuUploadQueue.Pending pending = gpuUploadQueue.poll();
             if (pending == null) break;
-
-            // A newer rebuild may have replaced this key while the upload was queued.
-            // Never upload stale geometry back over a newer CPU cache entry.
             if (chunkMeshCache.get(pending.key()) != pending.mesh()) continue;
 
             try {
                 var gpuMesh = chunkGpuCache.upload(renderer.backend(), pending.key(), pending.mesh());
-                if (gpuMesh == null) {
-                    // The resource was intentionally rejected (for example because it
-                    // cannot fit the bounded GPU budget). Do not immediately requeue it:
-                    // otherwise the same item can spin forever on this render thread.
-                    break;
-                }
+                if (gpuMesh == null) break;
                 uploaded++;
             } catch (RuntimeException failure) {
                 gpuUploadQueue.offer(pending.key(), pending.mesh(), pending.vanillaBuffer());
@@ -132,14 +121,54 @@ public final class AuraRuntime {
     }
 
     /**
-     * Draws only the GPU meshes belonging to the currently active vanilla render layer.
-     * Vanilla remains responsible for the normal draw; Aura is an additional opt-in path
-     * until full material/shader equivalence is proven.
+     * Returns true only when Aura has a complete, GPU-resident cache for every
+     * completed chunk for the supported opaque/cutout terrain layer. This gate
+     * prevents cancelling vanilla rendering while the replacement cache is still
+     * warming or incomplete.
      */
+    public static boolean renderReplacementLayer(RenderLayer layer,
+                                                 double cameraX,
+                                                 double cameraY,
+                                                 double cameraZ,
+                                                 int completedChunkCount) {
+        if (!isInitialized() || layer == null || chunkGpuCache == null) return false;
+        if (!Boolean.parseBoolean(System.getProperty("aura.render.replace_terrain", "false"))) return false;
+        if (!renderer.backend().isContextReady() || completedChunkCount <= 0) return false;
+        if (!isSupportedReplacementLayer(layer)) return false;
+
+        var entries = chunkGpuCache.snapshotForLayer(AuraChunkBufferRegistry.layerKey(layer));
+        if (entries.size() < completedChunkCount) return false;
+
+        int maxDistance = Math.max(16, Integer.getInteger("aura.render.distance", 12) * 16);
+        long maxDistanceSq = (long) maxDistance * maxDistance;
+        java.util.ArrayList<AuraRenderer.PositionedMesh> visible = new java.util.ArrayList<>(entries.size());
+        for (var entry : entries) {
+            ChunkMeshCache.Key key = entry.getKey();
+            double dx = key.x() + 8.0 - cameraX;
+            double dy = key.y() + 8.0 - cameraY;
+            double dz = key.z() + 8.0 - cameraZ;
+            if (dx * dx + dy * dy + dz * dz <= maxDistanceSq) {
+                visible.add(new AuraRenderer.PositionedMesh(entry.getValue(), key.x(), key.y(), key.z()));
+            }
+        }
+        if (visible.isEmpty()) return false;
+
+        layer.startDrawing();
+        try {
+            return renderer.drawPositionedMeshes(visible) > 0;
+        } finally {
+            layer.endDrawing();
+        }
+    }
+
+    private static boolean isSupportedReplacementLayer(RenderLayer layer) {
+        return layer == RenderLayer.getSolid()
+                || layer == RenderLayer.getCutoutMipped()
+                || layer == RenderLayer.getCutout();
+    }
+
     public static int renderCachedLayer(RenderLayer layer, double cameraX, double cameraY, double cameraZ) {
         if (!isInitialized() || layer == null || chunkGpuCache == null) return 0;
-        // Cached terrain remains opt-in until shader/material parity with every vanilla
-        // render layer is verified. This prevents duplicate terrain in normal gameplay.
         if (!Boolean.parseBoolean(System.getProperty("aura.render.cached_terrain", "false"))) return 0;
         if (!renderer.backend().isContextReady()) return 0;
         String layerKey = AuraChunkBufferRegistry.layerKey(layer);
