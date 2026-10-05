@@ -29,7 +29,8 @@ public final class AuraRuntime {
 
     private AuraRuntime() {}
 
-    public static void initialize() {
+    public static synchronized void initialize() {
+        if (isInitialized()) return;
         deviceProfile = AuraDeviceProfile.detect();
         RenderBackend selected = RenderBackendSelector.select();
         renderer = new AuraRenderer(selected, deviceProfile);
@@ -180,11 +181,15 @@ public final class AuraRuntime {
             chunkGpuCache.clear();
             chunkGpuCache = null;
         }
-        chunkMeshCache = null;
+        if (chunkMeshCache != null) {
+            chunkMeshCache.clear();
+            chunkMeshCache = null;
+        }
         if (renderer != null) {
             renderer.shutdown();
             renderer = null;
         }
         performanceManager = null;
+        AuraChunkBufferRegistry.clear();
     }
 }

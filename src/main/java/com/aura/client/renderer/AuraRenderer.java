@@ -46,7 +46,6 @@ public final class AuraRenderer {
                 commands.draw(mesh);
                 count++;
             }
-            commands.end();
             return count;
         } catch (RuntimeException failure) {
             lastFailure = failure;
@@ -65,7 +64,6 @@ public final class AuraRenderer {
                 commands.draw(positioned.mesh(), positioned.x(), positioned.y(), positioned.z());
                 count++;
             }
-            commands.end();
             return count;
         } catch (RuntimeException failure) {
             lastFailure = failure;
@@ -99,7 +97,6 @@ public final class AuraRenderer {
             for (var batch : batcher.batches().values()) {
                 for (RenderMesh mesh : batch.meshes()) commands.draw(mesh);
             }
-            commands.end();
             return batcher.meshCount();
         } catch (RuntimeException failure) {
             lastFailure = failure;
