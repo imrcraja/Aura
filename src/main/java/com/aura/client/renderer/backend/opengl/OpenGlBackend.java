@@ -48,8 +48,10 @@ public final class OpenGlBackend implements RenderBackend {
 
     @Override public RenderMesh uploadChunkMesh(String label, ChunkMeshData mesh) {
         requireInitialized();
+        int vertexArray = GL30.glGenVertexArrays();
         int vertexBuffer = GL15.glGenBuffers();
         int indexBuffer = GL15.glGenBuffers();
+        GL30.glBindVertexArray(vertexArray);
         FloatBuffer vertices = memAllocFloat(mesh.vertices().length);
         IntBuffer indices = memAllocInt(mesh.indices().length);
         try {
@@ -61,7 +63,10 @@ public final class OpenGlBackend implements RenderBackend {
             GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, indices, GL15.GL_STATIC_DRAW);
             GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
             GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
-            return new OpenGlMesh(label, mesh.vertexCount(), mesh.indexCount(), vertexBuffer, indexBuffer);
+            GL30.glBindVertexArray(0);
+            OpenGlMesh result = new OpenGlMesh(label, mesh.vertexCount(), mesh.indexCount(), vertexBuffer, indexBuffer);
+            result.vertexArray = vertexArray;
+            return result;
         } finally {
             memFree(vertices);
             memFree(indices);
@@ -82,6 +87,7 @@ public final class OpenGlBackend implements RenderBackend {
         private final String label;
         private final int vertexCount;
         private final int indexCount;
+        private int vertexArray;
         private int vertexBuffer;
         private int indexBuffer;
 
@@ -99,6 +105,7 @@ public final class OpenGlBackend implements RenderBackend {
 
         int vertexBuffer() { return vertexBuffer; }
         int indexBuffer() { return indexBuffer; }
+        int vertexArray() { return vertexArray; }
 
         @Override public void close() {
             if (vertexBuffer != 0) {
@@ -108,6 +115,10 @@ public final class OpenGlBackend implements RenderBackend {
             if (indexBuffer != 0) {
                 GL15.glDeleteBuffers(indexBuffer);
                 indexBuffer = 0;
+            }
+            if (vertexArray != 0) {
+                GL30.glDeleteVertexArrays(vertexArray);
+                vertexArray = 0;
             }
         }
     }
@@ -126,9 +137,11 @@ public final class OpenGlBackend implements RenderBackend {
             if (!recording) throw new IllegalStateException("Command list is not recording");
             if (!(mesh instanceof OpenGlMesh glMesh)) return;
             if (glMesh.indexCount() <= 0 || glMesh.indexBuffer() == 0) return;
+            GL30.glBindVertexArray(glMesh.vertexArray());
             GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, glMesh.indexBuffer());
             GL15.glDrawElements(GL15.GL_TRIANGLES, glMesh.indexCount(), GL15.GL_UNSIGNED_INT, 0L);
             GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
+            GL30.glBindVertexArray(0);
         }
 
         @Override public void end() {
