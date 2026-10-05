@@ -129,6 +129,8 @@ public final class OpenGlBackend implements RenderBackend {
         @Override public int vertexCount() { return vertexCount; }
         @Override public int indexCount() { return indexCount; }
 
+        @Override public long estimatedBytes() { return (long) vertexCount * 3L * Float.BYTES + (long) indexCount * Integer.BYTES; }
+
         @Override public void close() {
             if (vertexBuffer != 0) {
                 GL15.glDeleteBuffers(vertexBuffer);

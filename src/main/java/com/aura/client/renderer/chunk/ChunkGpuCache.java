@@ -6,45 +6,55 @@ import com.aura.client.renderer.backend.RenderMesh;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Reuses backend mesh handles with bounded ownership and explicit cleanup. */
+/** Reuses backend mesh handles with a bounded byte budget and explicit cleanup. */
 public final class ChunkGpuCache {
-    private final int maxEntries;
+    private final long budgetBytes;
+    private long usedBytes;
     private final LinkedHashMap<ChunkMeshCache.Key, RenderMesh> entries =
             new LinkedHashMap<>(32, 0.75f, true);
 
-    public ChunkGpuCache(int maxEntries) {
-        if (maxEntries < 1) throw new IllegalArgumentException("maxEntries must be positive");
-        this.maxEntries = maxEntries;
+    public ChunkGpuCache(long budgetBytes) {
+        if (budgetBytes < 1) throw new IllegalArgumentException("budgetBytes must be positive");
+        this.budgetBytes = budgetBytes;
     }
 
     public synchronized RenderMesh get(ChunkMeshCache.Key key) { return entries.get(key); }
 
     public synchronized RenderMesh upload(RenderBackend backend, ChunkMeshCache.Key key, ChunkMeshData mesh) {
         RenderMesh old = entries.remove(key);
-        if (old != null) old.close();
+        if (old != null) usedBytes -= old.estimatedBytes();
+
         RenderMesh uploaded = backend.uploadChunkMesh(
                 "chunk-" + key.x() + "-" + key.y() + "-" + key.z(), mesh);
         entries.put(key, uploaded);
+        usedBytes += uploaded.estimatedBytes();
         trim();
         return uploaded;
     }
 
     public synchronized void remove(ChunkMeshCache.Key key) {
         RenderMesh old = entries.remove(key);
-        if (old != null) old.close();
+        if (old != null) {
+            usedBytes -= old.estimatedBytes();
+            old.close();
+        }
     }
 
     public synchronized void clear() {
         for (RenderMesh mesh : entries.values()) mesh.close();
         entries.clear();
+        usedBytes = 0L;
     }
 
     public synchronized int size() { return entries.size(); }
+    public synchronized long usedBytes() { return usedBytes; }
+    public long budgetBytes() { return budgetBytes; }
 
     private void trim() {
-        while (entries.size() > maxEntries) {
-            var it = entries.entrySet().iterator();
+        var it = entries.entrySet().iterator();
+        while (usedBytes > budgetBytes && it.hasNext()) {
             Map.Entry<ChunkMeshCache.Key, RenderMesh> oldest = it.next();
+            usedBytes -= oldest.getValue().estimatedBytes();
             oldest.getValue().close();
             it.remove();
         }

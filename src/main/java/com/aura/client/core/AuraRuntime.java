@@ -29,7 +29,7 @@ public final class AuraRuntime {
         renderer = new AuraRenderer(RenderBackendSelector.select(), deviceProfile);
         renderer.initialize();
         chunkMeshCache = new ChunkMeshCache(AuraAdaptiveCache.budgetBytes(deviceProfile));
-        chunkGpuCache = new ChunkGpuCache(AuraAdaptiveCache.gpuEntryBudget(deviceProfile));
+        chunkGpuCache = new ChunkGpuCache(AuraAdaptiveCache.budgetBytes(deviceProfile));
 
         performanceManager = new AuraPerformanceManager();
         performanceManager.register();
