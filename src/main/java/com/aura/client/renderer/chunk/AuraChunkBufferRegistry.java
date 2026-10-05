@@ -26,18 +26,21 @@ public final class AuraChunkBufferRegistry {
         if (chunk == null || layer == null || buffer == null) return;
         BlockPos origin = chunk.getOrigin();
         if (origin == null) return;
-        REVISIONS.computeIfAbsent(chunk, ignored -> new AtomicInteger()).incrementAndGet();
+
+        String layerKey = layerKey(layer);
+        BindingSeed existing = BUFFERS.get(buffer);
+        if (existing != null && existing.chunk() == chunk && existing.layer().equals(layerKey)) return;
+
+        int revision = REVISIONS.computeIfAbsent(chunk, ignored -> new AtomicInteger()).incrementAndGet();
         BUFFERS.put(buffer, new BindingSeed(
                 origin.getX(), origin.getY(), origin.getZ(),
-                origin.getY() >> 4,
-                layerKey(layer), chunk));
+                origin.getY() >> 4, layerKey, chunk, revision));
     }
 
     public static synchronized Binding resolve(VertexBuffer buffer) {
         BindingSeed seed = BUFFERS.get(buffer);
         if (seed == null) return null;
-        int revision = REVISIONS.getOrDefault(seed.chunk(), new AtomicInteger()).get();
-        return new Binding(seed.x(), seed.y(), seed.z(), seed.section(), seed.layer(), revision);
+        return new Binding(seed.x(), seed.y(), seed.z(), seed.section(), seed.layer(), seed.revision());
     }
 
     public static synchronized void unbind(ChunkBuilder.BuiltChunk chunk) {
@@ -54,5 +57,5 @@ public final class AuraChunkBufferRegistry {
     }
 
     private record BindingSeed(int x, int y, int z, int section, String layer,
-                               ChunkBuilder.BuiltChunk chunk) {}
+                               ChunkBuilder.BuiltChunk chunk, int revision) {}
 }
